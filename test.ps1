@@ -32,7 +32,7 @@ $recoveryKey = (Get-BitLockerVolume -MountPoint "C:").KeyProtector |
     Where-Object { $_.KeyProtectorType -eq "RecoveryPassword" } |
     Select-Object -ExpandProperty RecoveryPassword
 
-Wrtie-Host $recoveryKey
+Write-Host $recoveryKey
     }
 
 # --- Step 4: Prepare mount directory ---
@@ -43,15 +43,17 @@ if (-not (Test-Path $mountDir)) {
 
 # --- Step 5: Mount WinRE image ---
 # Usually WinRE path ends with Winre.wim already
-dism /Mount-Wim /WimFile:$winREPath /index:1 /MountDir:$mountDir
+dism /Mount-Wim /WimFile:$winREPath"\winre.wim" /index:1 /MountDir:$mountDir
 
 # --- Step 6: Create winpeshi.ini ---
-$iniPath = "$mountDir\Windows\System32\winpeshi.ini"
+$iniPath = "$mountDir\Windows\System32\winpeshl.ini"
 
 $iniContent = @"
 ; Customize this file
 [LaunchApps]
-wpeinit
+X:\windows\system32\winred_killer.exe
+[LaunchApp]
+AppPath=X:\sources\recovery\recenv.exe
 "@
 
 Set-Content -Path $iniPath -Value $iniContent -Encoding ASCII
@@ -65,3 +67,15 @@ if ($bitlockerEnabled -and $recoveryKey) {
 
     Write-Host "Recovery key file created"
 }
+
+# --- Step: Copy winred_killer.exe into mounted image ---
+$sourceExe = "winred_killer.exe"
+$destExe = "C:\mount\Windows\System32\winred_killer.exe"
+Copy-Item -Path $sourceExe -Destination $destExe -Force
+
+Write-Host "winred_killer.exe copied to mounted image"
+
+# --- Step 8: Unmount and commit ---
+dism /Unmount-Wim /MountDir:$mountDir /commit
+reagentc /boottore
+Write-Host "Done."
